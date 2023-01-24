@@ -1,0 +1,45 @@
+version: '3'
+
+volumes:
+  mysql_data:
+      driver: local
+
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:20.0.3
+    ports:
+      - 8080:8080
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=P@ssw0rd
+      - DB_VENDOR=mariadb
+      - DB_DATABASE=keycloak
+      - DB_ADDR=keycloak-db
+      - DB_USER=keycloak
+      - DB_PASSWORD=keycloak
+    command: 
+      - start-dev
+    depends_on:
+      - keycloak-db
+  keycloak-db:
+    image : mariadb:10.7.3
+    environment:
+      - MARIADB_ROOT_PASSWORD=P@ssw0rd
+      - MYSQL_DATABASE=keycloak
+      - MYSQL_USER=keycloak
+      - MYSQL_PASSWORD=keycloak
+      - PROXY_ADDRESS_FORWARDING=true
+    volumes:
+        - "./mysql_data:/var/lib/mysql"
+  whoami:
+    image: containous/whoami
+    deploy:
+      labels:
+        - traefik.frontend.rule=Host:whoami.example.com
+        - traefik.port=80
+        - traefik.frontend.auth.forward.address=http://traefik-forward-auth:4181
+        - traefik.frontend.auth.forward.authResponseHeaders=X-Forwarded-User
+        - traefik.frontend.auth.forward.trustForwardHeader=true
+  app:
+    image: traefik:v2.9.6
+  
